@@ -18,8 +18,7 @@ func Read() Config {
 	if err != nil {
 		panic(err)
 	}
-
-	val, err := os.ReadFile(filepath + configFileName)
+	val, err := os.ReadFile(filepath)
 	if err != nil {
 		panic(err)
 	}
@@ -42,8 +41,8 @@ func getConfigFilePath() (string, error) {
 	if err != nil {
 		panic(err)
 	}
-
-	return home, nil
+	filepath := home + "/" + configFileName
+	return filepath, nil
 }
 
 func write(c Config) error {
@@ -51,7 +50,11 @@ func write(c Config) error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(".gatorconfig.json", bytes, 06647)
+	filepath, err := getConfigFilePath()
+	if err != nil {
+		panic(err)
+	}
+	err = os.WriteFile(filepath, bytes, 06647)
 	if err != nil {
 		return err
 	}
