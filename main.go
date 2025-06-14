@@ -16,3 +16,12 @@ func main() {
 	fmt.Println(output.Url)
 
 }
+
+type state struct{
+	configuration *config.Config
+}
+
+type command struct {
+	name string
+	args []string
+}
