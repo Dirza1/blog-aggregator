@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/Dirza1/blog-aggregator/internal/config"
+	_ "github.com/lib/pq"
 )
 
 func main() {

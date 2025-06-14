@@ -1,0 +1,1 @@
+psql postgres://postgres:odin@localhost:5432/gator
