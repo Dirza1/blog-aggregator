@@ -69,7 +69,10 @@ func handlerRegister(s *state, cmd command) error {
 
 	} else if errors.Is(err, sql.ErrNoRows) {
 		currentTime := time.Now()
-		user, err := s.db.CreateUser(context.Background(), database.CreateUserParams{uuid.New(), currentTime, currentTime, cmd.args[0]})
+		user, err := s.db.CreateUser(context.Background(), database.CreateUserParams{ID: uuid.New(),
+			CreatedAt: currentTime,
+			UpdatedAt: currentTime,
+			Name:      cmd.args[0]})
 		if err != nil {
 			return err
 		}
