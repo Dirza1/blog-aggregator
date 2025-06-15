@@ -54,7 +54,7 @@ func write(c Config) error {
 	if err != nil {
 		panic(err)
 	}
-	err = os.WriteFile(filepath, bytes, 06647)
+	err = os.WriteFile(filepath, bytes, 0644)
 	if err != nil {
 		return err
 	}
