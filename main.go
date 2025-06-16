@@ -3,8 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/xml"
 	"errors"
 	"fmt"
+	"html"
+	"io"
+	"net/http"
 	"os"
 	"time"
 
@@ -131,6 +135,41 @@ func (c *commands) run(s *state, cmd command) error {
 
 func (c *commands) register(name string, f func(*state, command) error) {
 	c.commandHandlers[name] = f
+}
+
+func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
+	madeStruct := RSSFeed{}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, feedURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("User-Agent", "gator")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode > 299 {
+		return nil, errors.New("something went wrong with the fetiching of the data")
+	}
+	defer response.Body.Close()
+	bites, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	err = xml.Unmarshal(bites, &madeStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	madeStruct.Channel.Title = html.UnescapeString(madeStruct.Channel.Title)
+	madeStruct.Channel.Description = html.UnescapeString(madeStruct.Channel.Description)
+	for index := range madeStruct.Channel.Item {
+		ptr := &madeStruct.Channel.Item[index]
+		ptr.Description = html.UnescapeString(ptr.Description)
+		ptr.Title = html.UnescapeString(ptr.Title)
+	}
+
+	return &madeStruct, nil
 }
 
 type state struct {
