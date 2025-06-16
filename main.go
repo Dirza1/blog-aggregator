@@ -26,6 +26,7 @@ func main() {
 	currentCommands.commandHandlers["register"] = handlerRegister
 	currentCommands.commandHandlers["reset"] = handlerReset
 	currentCommands.commandHandlers["users"] = handlerUsers
+	currentCommands.commandHandlers["agg"] = handlerAgg
 	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
@@ -117,6 +118,16 @@ func handlerUsers(s *state, cmd command) error {
 
 	}
 
+	return nil
+}
+
+func handlerAgg(s *state, cmd command) error {
+	url := "https://www.wagslane.dev/index.xml"
+	data, err := fetchFeed(context.Background(), url)
+	if err != nil {
+		return err
+	}
+	fmt.Println(data)
 	return nil
 }
 
