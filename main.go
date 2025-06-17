@@ -27,6 +27,7 @@ func main() {
 	currentCommands.commandHandlers["reset"] = handlerReset
 	currentCommands.commandHandlers["users"] = handlerUsers
 	currentCommands.commandHandlers["agg"] = handlerAgg
+	currentCommands.commandHandlers["addfeed"] = handleraddfeed
 	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
@@ -131,7 +132,33 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
+func handleraddfeed(s *state, cmd command) error {
+	if len(cmd.args) < 1 {
+		fmt.Println("Not sufficient ammounts of arguments given. Expect a name and a URL")
+		os.Exit(1)
+	}
+	currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
+	if err != nil {
+		return err
+	}
+	feedName := cmd.args[0]
+	feedURL := cmd.args[1]
+	currentTime := time.Now()
+	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{ID: uuid.New(),
+		CreatedAt: currentTime,
+		UpdatedAt: currentTime,
+		Name:      feedName,
+		Url:       feedURL, UserID: currentUser.ID})
+	if err != nil {
+		return err
+	}
+	fmt.Println(feed.Name, feed.ID, feed.CreatedAt, feed.UpdatedAt, feed.Url, feed.UserID)
+	return nil
+
+}
+
 func (c *commands) run(s *state, cmd command) error {
+
 	function, exists := c.commandHandlers[cmd.name]
 	if exists {
 		err := function(s, cmd)
