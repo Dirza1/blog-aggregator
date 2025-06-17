@@ -28,6 +28,7 @@ func main() {
 	currentCommands.commandHandlers["users"] = handlerUsers
 	currentCommands.commandHandlers["agg"] = handlerAgg
 	currentCommands.commandHandlers["addfeed"] = handleraddfeed
+	currentCommands.commandHandlers["feeds"] = handlerfeeds
 	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
@@ -155,6 +156,17 @@ func handleraddfeed(s *state, cmd command) error {
 		feed.Name, feed.ID, feed.Url, feed.UserID)
 	return nil
 
+}
+
+func handlerfeeds(s *state, cmd command) error {
+	listOfFeeds, err := s.db.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+	for _, feed := range listOfFeeds {
+		fmt.Printf("Feed name = %s, Feed URL = %s, Assosiated user = %s", feed.Name, feed.Url, feed.Username.String)
+	}
+	return nil
 }
 
 func (c *commands) run(s *state, cmd command) error {
