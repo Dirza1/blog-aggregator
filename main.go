@@ -133,9 +133,8 @@ func handlerAgg(s *state, cmd command) error {
 }
 
 func handleraddfeed(s *state, cmd command) error {
-	if len(cmd.args) < 1 {
-		fmt.Println("Not sufficient ammounts of arguments given. Expect a name and a URL")
-		os.Exit(1)
+	if len(cmd.args) < 2 {
+		return fmt.Errorf("not sufficient amounts of arguments given. Expect a name and a URL")
 	}
 	currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
 	if err != nil {
@@ -152,7 +151,8 @@ func handleraddfeed(s *state, cmd command) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(feed.Name, feed.ID, feed.CreatedAt, feed.UpdatedAt, feed.Url, feed.UserID)
+	fmt.Printf("Feed created!\nName: %s\nID: %s\nURL: %s\nUser ID: %s\n",
+		feed.Name, feed.ID, feed.Url, feed.UserID)
 	return nil
 
 }
