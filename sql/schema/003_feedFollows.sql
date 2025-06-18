@@ -12,5 +12,5 @@ REFERENCES feeds(id) ON DELETE CASCADE,
 UNIQUE(user_id,feed_id)
 );
 
--- + goose Down
+-- +goose Down
 DROP TABLE feed_follows;
