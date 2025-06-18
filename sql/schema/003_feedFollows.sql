@@ -13,4 +13,4 @@ UNIQUE(user_id,feed_id)
 );
 
 -- + goose Down
-DROP TABLE feed_follows
+DROP TABLE feed_follows;
