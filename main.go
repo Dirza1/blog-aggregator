@@ -29,6 +29,8 @@ func main() {
 	currentCommands.commandHandlers["agg"] = handlerAgg
 	currentCommands.commandHandlers["addfeed"] = handleraddfeed
 	currentCommands.commandHandlers["feeds"] = handlerfeeds
+	currentCommands.commandHandlers["follow"] = handlerfollow
+	currentCommands.commandHandlers["following"] = handlerfollowing
 	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
@@ -154,6 +156,11 @@ func handleraddfeed(s *state, cmd command) error {
 	}
 	fmt.Printf("Feed created!\nName: %s\nID: %s\nURL: %s\nUser ID: %s\n",
 		feed.Name, feed.ID, feed.Url, feed.UserID)
+	s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{ID: uuid.New(),
+		CreatedAt: currentTime,
+		UpdatedAt: currentTime,
+		FeedID:    feed.ID,
+		UserID:    currentUser.ID})
 	return nil
 
 }
@@ -165,6 +172,47 @@ func handlerfeeds(s *state, cmd command) error {
 	}
 	for _, feed := range listOfFeeds {
 		fmt.Printf("Feed name = %s, Feed URL = %s, Assosiated user = %s", feed.Name, feed.Url, feed.Username.String)
+	}
+	return nil
+}
+
+func handlerfollow(s *state, cmd command) error {
+	if len(cmd.args) == 0 {
+		return errors.New("expected URL to be passed in")
+	}
+	currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
+	if err != nil {
+		return errors.New("user id could not be found. Ensure current user is logged in coorectly")
+	}
+	feedId, err := s.db.GetFeedId(context.Background(), cmd.args[0])
+	if err != nil {
+		return errors.New("feed id could not be found. Ensure the feed URL is regestered usiing the addfeed command with the name and URL")
+	}
+	currentTime := time.Now()
+	feedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{ID: uuid.New(),
+		CreatedAt: currentTime,
+		UpdatedAt: currentTime,
+		FeedID:    feedId,
+		UserID:    currentUser.ID})
+	if err != nil {
+		return errors.New("new relationship could not be made")
+	}
+	fmt.Printf("user: %s is now following feed: %s", feedFollow.FeedName, feedFollow.UserName)
+	return nil
+}
+
+func handlerfollowing(s *state, cmd command) error {
+	currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
+	if err != nil {
+		return errors.New("user id could not be found. Ensure current user is logged in coorectly")
+	}
+	followedFeeds, err := s.db.GetFeedFollowsForUser(context.Background(), currentUser.ID)
+	if err != nil {
+		return errors.New("feeds could not be retrieved for the current user")
+	}
+	fmt.Printf("Current user: %s is following the following feeds: \n", currentUser.Name)
+	for _, feed := range followedFeeds {
+		fmt.Printf("%s\n", feed.FeedName)
 	}
 	return nil
 }
@@ -181,10 +229,6 @@ func (c *commands) run(s *state, cmd command) error {
 		return errors.New("command does not exist")
 	}
 	return nil
-}
-
-func (c *commands) register(name string, f func(*state, command) error) {
-	c.commandHandlers[name] = f
 }
 
 func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
