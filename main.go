@@ -197,7 +197,7 @@ func handlerfollow(s *state, cmd command) error {
 	if err != nil {
 		return errors.New("new relationship could not be made")
 	}
-	fmt.Printf("user: %s is now following feed: %s", feedFollow.FeedName, feedFollow.UserName)
+	fmt.Printf("user: %s is now following feed: %s", feedFollow.UserName, feedFollow.FeedName)
 	return nil
 }
 
