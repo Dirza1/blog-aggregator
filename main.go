@@ -27,11 +27,12 @@ func main() {
 	currentCommands.commandHandlers["reset"] = handlerReset
 	currentCommands.commandHandlers["users"] = handlerUsers
 	currentCommands.commandHandlers["agg"] = handlerAgg
-	currentCommands.commandHandlers["addfeed"] = handleraddfeed
+	currentCommands.commandHandlers["addfeed"] = middlewareLoggedIn(handleraddfeed)
 	currentCommands.commandHandlers["feeds"] = handlerfeeds
-	currentCommands.commandHandlers["follow"] = handlerfollow
-	currentCommands.commandHandlers["following"] = handlerfollowing
-	db, err := sql.Open("postgres", "postgres://postgres:Odin@localhost:5432/gator")
+	currentCommands.commandHandlers["follow"] = middlewareLoggedIn(handlerfollow)
+	currentCommands.commandHandlers["following"] = middlewareLoggedIn(handlerfollowing)
+	currentCommands.commandHandlers["unfollow"] = middlewareLoggedIn(handlerunfollow)
+	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -135,13 +136,9 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
-func handleraddfeed(s *state, cmd command) error {
+func handleraddfeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) < 2 {
 		return fmt.Errorf("not sufficient amounts of arguments given. Expect a name and a URL")
-	}
-	currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
-	if err != nil {
-		return err
 	}
 	feedName := cmd.args[0]
 	feedURL := cmd.args[1]
@@ -150,7 +147,7 @@ func handleraddfeed(s *state, cmd command) error {
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
 		Name:      feedName,
-		Url:       feedURL, UserID: currentUser.ID})
+		Url:       feedURL, UserID: user.ID})
 	if err != nil {
 		return err
 	}
@@ -160,7 +157,7 @@ func handleraddfeed(s *state, cmd command) error {
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
 		FeedID:    feed.ID,
-		UserID:    currentUser.ID})
+		UserID:    user.ID})
 	return nil
 
 }
@@ -176,43 +173,46 @@ func handlerfeeds(s *state, cmd command) error {
 	return nil
 }
 
-func handlerfollow(s *state, cmd command) error {
+func handlerfollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) == 0 {
 		return errors.New("expected URL to be passed in")
 	}
-	currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
-	if err != nil {
-		return errors.New("user id could not be found. Ensure current user is logged in coorectly")
-	}
 	feedId, err := s.db.GetFeedId(context.Background(), cmd.args[0])
 	if err != nil {
-		return errors.New("feed id could not be found. Ensure the feed URL is regestered usiing the addfeed command with the name and URL")
+		return err
 	}
 	currentTime := time.Now()
 	feedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{ID: uuid.New(),
 		CreatedAt: currentTime,
 		UpdatedAt: currentTime,
 		FeedID:    feedId,
-		UserID:    currentUser.ID})
+		UserID:    user.ID})
 	if err != nil {
-		return errors.New("new relationship could not be made")
+		return err
 	}
 	fmt.Printf("user: %s is now following feed: %s", feedFollow.UserName, feedFollow.FeedName)
 	return nil
 }
 
-func handlerfollowing(s *state, cmd command) error {
-	currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
+func handlerfollowing(s *state, cmd command, user database.User) error {
+	followedFeeds, err := s.db.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
-		return errors.New("user id could not be found. Ensure current user is logged in coorectly")
+		return err
 	}
-	followedFeeds, err := s.db.GetFeedFollowsForUser(context.Background(), currentUser.ID)
-	if err != nil {
-		return errors.New("feeds could not be retrieved for the current user")
-	}
-	fmt.Printf("Current user: %s is following the following feeds: \n", currentUser.Name)
+	fmt.Printf("Current user: %s is following the following feeds: \n", user.Name)
 	for _, feed := range followedFeeds {
 		fmt.Printf("%s\n", feed.FeedName)
+	}
+	return nil
+}
+
+func handlerunfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) < 1 {
+		return errors.New("no url found")
+	}
+	err := s.db.RemoveFollow(context.Background(), database.RemoveFollowParams{Name: user.Name, Url: cmd.args[0]})
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -228,14 +228,6 @@ func (c *commands) run(s *state, cmd command) error {
 	} else {
 		return errors.New("command does not exist")
 	}
-	return nil
-}
-
-func (c *commands) register(s *state, cmd command) error {
-	return nil
-}
-
-func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
 	return nil
 }
 
@@ -302,4 +294,19 @@ type RSSItem struct {
 	Link        string `xml:"link"`
 	Description string `xml:"description"`
 	PubDate     string `xml:"pubDate"`
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
+
+	return func(s *state, cmd command) error {
+		currentUser, err := s.db.GetUser(context.Background(), s.configuration.User)
+		if err != nil {
+			return err
+		}
+		err = handler(s, cmd, currentUser)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
 }
