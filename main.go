@@ -31,7 +31,7 @@ func main() {
 	currentCommands.commandHandlers["feeds"] = handlerfeeds
 	currentCommands.commandHandlers["follow"] = handlerfollow
 	currentCommands.commandHandlers["following"] = handlerfollowing
-	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
+	db, err := sql.Open("postgres", "postgres://postgres:Odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -228,6 +228,14 @@ func (c *commands) run(s *state, cmd command) error {
 	} else {
 		return errors.New("command does not exist")
 	}
+	return nil
+}
+
+func (c *commands) register(s *state, cmd command) error {
+	return nil
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
 	return nil
 }
 
