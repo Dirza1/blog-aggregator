@@ -309,3 +309,27 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 		return nil
 	}
 }
+
+func scrapeFeeds(s *state) {
+	feed, err := s.db.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		fmt.Printf("error during retrieving of next feed from ddatabase: %s", err)
+		os.Exit(1)
+	}
+	currentTime := time.Now()
+	nullTime := sql.NullTime{
+		Time:  currentTime,
+		Valid: true,
+	}
+	err = s.db.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{LastFetchedAt: nullTime, UpdatedAt: currentTime, ID: feed.ID})
+	if err != nil {
+		fmt.Printf("Error during marking feed as fetched: %s", err)
+	}
+	retrievedFeed, err := fetchFeed(context.Background(), feed.ID.String())
+	if err != nil {
+		fmt.Printf("Error during retrieving feed from URL: %s", err)
+	}
+	for _, feed := range *retrievedFeed {
+
+	}
+}
