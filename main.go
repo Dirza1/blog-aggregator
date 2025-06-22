@@ -126,13 +126,15 @@ func handlerUsers(s *state, cmd command) error {
 }
 
 func handlerAgg(s *state, cmd command) error {
-	url := "https://www.wagslane.dev/index.xml"
-	data, err := fetchFeed(context.Background(), url)
+	time_between_reqs, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
 		return err
 	}
-	fmt.Println(data)
-	return nil
+	ticker := time.NewTicker(time_between_reqs)
+	fmt.Printf("Collecting feeds every %s\n", time_between_reqs)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
 }
 
 func handleraddfeed(s *state, cmd command, user database.User) error {
@@ -313,7 +315,7 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 func scrapeFeeds(s *state) {
 	feed, err := s.db.GetNextFeedToFetch(context.Background())
 	if err != nil {
-		fmt.Printf("error during retrieving of next feed from ddatabase: %s", err)
+		fmt.Printf("error during retrieving of next feed from database: %s", err)
 		os.Exit(1)
 	}
 	currentTime := time.Now()
@@ -325,11 +327,11 @@ func scrapeFeeds(s *state) {
 	if err != nil {
 		fmt.Printf("Error during marking feed as fetched: %s", err)
 	}
-	retrievedFeed, err := fetchFeed(context.Background(), feed.ID.String())
+	retrievedFeed, err := fetchFeed(context.Background(), feed.Url)
 	if err != nil {
 		fmt.Printf("Error during retrieving feed from URL: %s", err)
 	}
-	for _, feed := range *retrievedFeed {
-
+	for _, feed := range retrievedFeed.Channel.Item {
+		fmt.Println(feed.Title)
 	}
 }
