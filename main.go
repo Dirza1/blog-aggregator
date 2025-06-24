@@ -17,7 +17,6 @@ import (
 	"github.com/Dirza1/blog-aggregator/internal/database"
 	"github.com/google/uuid"
 	"github.com/lib/pq"
-	_ "github.com/lib/pq"
 )
 
 func main() {
