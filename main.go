@@ -32,7 +32,7 @@ func main() {
 	currentCommands.commandHandlers["follow"] = middlewareLoggedIn(handlerfollow)
 	currentCommands.commandHandlers["following"] = middlewareLoggedIn(handlerfollowing)
 	currentCommands.commandHandlers["unfollow"] = middlewareLoggedIn(handlerunfollow)
-	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
+	db, err := sql.Open("postgres", "postgres://postgres:Odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
 	}

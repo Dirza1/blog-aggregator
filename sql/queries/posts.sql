@@ -11,6 +11,11 @@ VALUES (
     $8
 );
 
--- name: GetPostsFor User :$1
-SELECT * FROM posts
-WHERE 
+-- name: GetPostsForUser :many
+SELECT * 
+FROM posts
+INNER JOIN feed_Follows
+ON posts.feed_id = feed_follows.feed_id
+WHERE feed_follows.user_id = $1
+ORDER BY published_at DESC
+LIMIT $2;
