@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Dirza1/blog-aggregator/internal/config"
@@ -33,6 +34,7 @@ func main() {
 	currentCommands.commandHandlers["follow"] = middlewareLoggedIn(handlerfollow)
 	currentCommands.commandHandlers["following"] = middlewareLoggedIn(handlerfollowing)
 	currentCommands.commandHandlers["unfollow"] = middlewareLoggedIn(handlerunfollow)
+	currentCommands.commandHandlers["browse"] = middlewareLoggedIn(handlerbrowse)
 	db, err := sql.Open("postgres", "postgres://postgres:Odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
@@ -215,6 +217,26 @@ func handlerunfollow(s *state, cmd command, user database.User) error {
 	err := s.db.RemoveFollow(context.Background(), database.RemoveFollowParams{Name: user.Name, Url: cmd.args[0]})
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func handlerbrowse(s *state, cmd command, user database.User) error {
+	litmit := 2
+	var err error
+	if len(cmd.args) > 0 {
+		litmit, err = strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return err
+		}
+	}
+	posts, err := s.db.GetPostsForUser(context.Background(), database.GetPostsForUserParams{UserID: user.ID, Limit: int32(litmit)})
+	if err != nil {
+		return err
+	}
+	for _, post := range posts {
+		fmt.Printf("Title: %s\n", post.Title)
+		fmt.Printf("%s", post.Description)
 	}
 	return nil
 }
