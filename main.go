@@ -35,7 +35,7 @@ func main() {
 	currentCommands.commandHandlers["following"] = middlewareLoggedIn(handlerfollowing)
 	currentCommands.commandHandlers["unfollow"] = middlewareLoggedIn(handlerunfollow)
 	currentCommands.commandHandlers["browse"] = middlewareLoggedIn(handlerbrowse)
-	db, err := sql.Open("postgres", "postgres://postgres:Odin@localhost:5432/gator")
+	db, err := sql.Open("postgres", "postgres://postgres:odin@localhost:5432/gator")
 	if err != nil {
 		os.Exit(1)
 	}
@@ -136,6 +136,7 @@ func handlerAgg(s *state, cmd command) error {
 	ticker := time.NewTicker(time_between_reqs)
 	fmt.Printf("Collecting feeds every %s\n", time_between_reqs)
 	for ; ; <-ticker.C {
+		fmt.Println("fetching....")
 		scrapeFeeds(s)
 	}
 }
@@ -235,8 +236,9 @@ func handlerbrowse(s *state, cmd command, user database.User) error {
 		return err
 	}
 	for _, post := range posts {
-		fmt.Printf("Title: %s\n", post.Title)
-		fmt.Printf("%s", post.Description)
+		fmt.Printf("Title: %s\n", post.Title.String)
+		fmt.Printf("Description : %s\n", post.Description)
+		fmt.Printf("URL: %s\n", post.Url)
 	}
 	return nil
 }
@@ -358,14 +360,15 @@ func scrapeFeeds(s *state) {
 	for _, item := range retrievedFeed.Channel.Item {
 		nullTitle := sql.NullString{}
 		layouts := []string{
-			"RFC822",
-			"DateTime",
-			"Stamp",
-			"DateOnly",
-			"ANSIC",
+			"02 Jan 06 15:04 MST",
+			"2006-01-02 15:04:05",
+			"Jan _2 15:04:05",
+			"2006-01-02",
+			"Mon Jan _2 15:04:05 2006",
+			"Mon, 02 Jan 2006 15:04:05 -0700",
 		}
 		publiced_time := time.Time{}
-		err = nil
+		var err error
 		for _, i := range layouts {
 			publiced_time, err = time.Parse(i, item.PubDate)
 			if err == nil {
