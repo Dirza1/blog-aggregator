@@ -15,6 +15,7 @@ import (
 	"github.com/Dirza1/blog-aggregator/internal/config"
 	"github.com/Dirza1/blog-aggregator/internal/database"
 	"github.com/google/uuid"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -331,7 +332,57 @@ func scrapeFeeds(s *state) {
 	if err != nil {
 		fmt.Printf("Error during retrieving feed from URL: %s", err)
 	}
-	for _, feed := range retrievedFeed.Channel.Item {
-		fmt.Println(feed.Title)
+
+	for _, item := range retrievedFeed.Channel.Item {
+		nullTitle := sql.NullString{}
+		layouts := []string{
+			"RFC822",
+			"DateTime",
+			"Stamp",
+			"DateOnly",
+			"ANSIC",
+		}
+		publiced_time := time.Time{}
+		err = nil
+		for _, i := range layouts {
+			publiced_time, err = time.Parse(i, item.PubDate)
+			if err == nil {
+				break
+			}
+		}
+		if err != nil {
+			fmt.Printf("an error occured during the parsing of the publiced time of the feed. %S\n", err)
+			os.Exit(1)
+		}
+
+		if item.Title != "" {
+			nullTitle.String = item.Title
+			nullTitle.Valid = true
+
+		} else {
+			nullTitle.String = ""
+			nullTitle.Valid = false
+
+		}
+
+		err = s.db.CreatePost(context.Background(), database.CreatePostParams{ID: uuid.New(),
+			CreatedAt:   currentTime,
+			UpdatedAt:   currentTime,
+			Title:       nullTitle,
+			Url:         item.Link,
+			Description: item.Description,
+			PublishedAt: publiced_time,
+			FeedID:      feed.ID})
+		if err != nil {
+			if pqErr, ok := err.(*pq.Error); ok {
+				if pqErr.Code == "23505" {
+					continue
+				}
+			} else {
+				fmt.Printf("Error inserting post: %v", err)
+				os.Exit(1)
+			}
+		}
+
 	}
 }
